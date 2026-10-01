@@ -26,12 +26,20 @@
     #out { margin-top: 20px; white-space: pre-wrap; display: none; }
     #copy { margin-top: 12px; background: transparent; color: var(--accent); border: 1px solid var(--accent); display: none; }
     .err { color: #d6336c; margin-top: 12px; }
+    #status { background: #fff3bf; color: #5c3c00; border: 1px solid #ffd43b; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; }
+    #status code { background: rgba(0,0,0,.08); padding: 1px 5px; border-radius: 4px; }
   </style>
 </head>
 <body>
 <main>
   <h1>Listing<span>Lift</span></h1>
   <p class="tag">Paste your product notes. Get a listing written for search, ready to post, in seconds.</p>
+
+  <div id="status">
+    <strong>The ListingLift server isn't running, so the button can't work yet.</strong><br>
+    In a terminal, inside the project folder, run <code>npm install</code> and then <code>npm start</code>.
+    Then open <code>http://localhost:3000</code> in your browser instead of opening this file directly.
+  </div>
 
   <form class="card" id="form">
     <label for="product">What are you selling?</label>
@@ -58,6 +66,21 @@
   const err = document.getElementById("err");
   const go = document.getElementById("go");
   const copy = document.getElementById("copy");
+  const status = document.getElementById("status");
+
+  // The setup notice is visible by default; hide it only once the server answers.
+  fetch("/api/health")
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.hasApiKey) {
+        status.remove();
+      } else {
+        status.innerHTML = "<strong>Almost there: no API key found.</strong><br>" +
+          "Copy <code>.env.example</code> to <code>.env</code>, paste your key from console.anthropic.com " +
+          "after <code>ANTHROPIC_API_KEY=</code>, then stop the server (Ctrl+C) and run <code>npm start</code> again.";
+      }
+    })
+    .catch(() => {});
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -91,7 +114,8 @@
       }
       copy.style.display = "inline-block";
     } catch {
-      err.textContent = "Network error. Please try again.";
+      out.style.display = "none";
+      err.textContent = "Couldn't reach the ListingLift server. Make sure it's running (npm start) and that you opened http://localhost:3000.";
     } finally {
       go.disabled = false;
       go.textContent = "Write my listing";

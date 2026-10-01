@@ -118,6 +118,10 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url === "/api/generate") {
     return handleGenerate(req, res);
   }
+  if (req.method === "GET" && req.url === "/api/health") {
+    res.writeHead(200, { "content-type": "application/json" });
+    return res.end(JSON.stringify({ ok: true, hasApiKey: Boolean(process.env.ANTHROPIC_API_KEY) }));
+  }
   if (req.method === "GET" && (req.url === "/" || req.url === "/index.html")) {
     const html = await fs.readFile(path.join(here, "public", "index.html"));
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
