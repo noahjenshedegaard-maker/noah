@@ -1,0 +1,16 @@
+{
+  "name": "listinglift",
+  "version": "0.1.0",
+  "description": "AI product-listing writer for Etsy, Shopify, Amazon and eBay sellers, powered by Claude.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "latest"
+  }
+}
