@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>OnTrack</title>
+<style>
+/* Layout: a fixed left rail of four sections on desktop, a bottom tab bar on narrow windows. */
+:root {
+  --bg: #f3f5f2;
+  --surface: #ffffff;
+  --ink: #17201b;
+  --muted: #5d6b63;
+  --line: #dde3de;
+  --accent: #2f6b4f;      /* steady green: "on track" */
+  --accent-soft: #e2efe7;
+  --warn: #b86a12;
+  --warn-soft: #fbefdf;
+  --bad: #b23a3a;
+  --bad-soft: #f8e3e3;
+  --font-display: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111613; --surface: #1a211d; --ink: #e7ede9; --muted: #98a69e; --line: #2c3631;
+    --accent: #6fc39a; --accent-soft: #1f3a2d; --warn: #e6a659; --warn-soft: #3a2c19;
+    --bad: #ec8a8a; --bad-soft: #3d2121; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111613; --surface: #1a211d; --ink: #e7ede9; --muted: #98a69e; --line: #2c3631;
+  --accent: #6fc39a; --accent-soft: #1f3a2d; --warn: #e6a659; --warn-soft: #3a2c19;
+  --bad: #ec8a8a; --bad-soft: #3d2121; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.5 var(--font-body);
+}
+.app { display: grid; grid-template-columns: 200px 1fr; min-height: 100%; }
+nav.rail {
+  background: var(--surface); border-right: 1px solid var(--line);
+  padding: 24px 12px; display: flex; flex-direction: column; gap: 4px;
+  position: sticky; top: 0; height: 100vh;
+}
+.brand { font: 700 22px/1.1 var(--font-display); padding: 0 10px 18px; letter-spacing: -0.01em; }
+.brand span { color: var(--accent); }
+nav.rail button {
+  all: unset; cursor: pointer; padding: 9px 12px; border-radius: 8px;
+  font-weight: 600; color: var(--muted); display: flex; justify-content: space-between; align-items: center;
+}
+nav.rail button:hover { background: var(--bg); color: var(--ink); }
+nav.rail button[aria-current="true"] { background: var(--accent-soft); color: var(--accent); }
+nav.rail button:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+.badge { font: 600 12px var(--font-mono); background: var(--bg); color: var(--muted); padding: 1px 7px; border-radius: 99px; }
+.rail-foot { margin-top: auto; padding: 0 10px; font-size: 12px; color: var(--muted); }
+.rail-foot button { padding: 4px 0 !important; font-weight: 500 !important; font-size: 12px; }
+
+main { padding-block: 32px 96px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); min-width: 0; }
+.wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1 { font: 700 30px/1.15 var(--font-display); margin: 0; text-wrap: balance; letter-spacing: -0.015em; }
+h2 { font: 700 17px/1.3 var(--font-display); margin: 0; }
+.sub { color: var(--muted); margin: 4px 0 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.big { font: 700 40px/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.big small { font-size: 15px; color: var(--muted); font-weight: 600; }
+
+input, select, textarea {
+  font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; min-width: 0;
+}
+textarea { width: 100%; min-height: 110px; resize: vertical; }
+input[type="text"], input[type="email"] { flex: 1 1 200px; }
+.btn {
+  font: 600 14px var(--font-body); border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  padding: 8px 14px; border-radius: 8px; cursor: pointer;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.good[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.btn.slip[aria-pressed="true"] { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.btn.small { padding: 4px 10px; font-size: 13px; }
+a.btn { text-decoration: none; display: inline-block; }
+
+ul.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+ul.list li { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+ul.list li:first-child { border-top: 0; }
+ul.list li .t { min-width: 0; overflow-wrap: anywhere; }
+ul.list li.done .t .main { text-decoration: line-through; color: var(--muted); }
+.meta { font-size: 13px; color: var(--muted); }
+.pill { font: 600 12px var(--font-body); padding: 2px 9px; border-radius: 99px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pill.ok { background: var(--accent-soft); color: var(--accent); }
+.pill.soon { background: var(--warn-soft); color: var(--warn); }
+.pill.late { background: var(--bad-soft); color: var(--bad); }
+.pill.cat { background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
+.x { all: unset; cursor: pointer; color: var(--muted); padding: 2px 6px; border-radius: 6px; font-size: 18px; line-height: 1; }
+.x:hover { color: var(--bad); background: var(--bad-soft); }
+input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+.empty { color: var(--muted); font-size: 14px; padding: 6px 0; }
+
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.day { text-align: center; font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.dot { width: 26px; height: 26px; border-radius: 50%; border: 1.5px dashed var(--line); }
+.dot.honest { background: var(--accent); border: 0; }
+.dot.slip { background: var(--warn); border: 0; }
+.check-q { display: flex; gap: 10px; align-items: flex-start; }
+.verdict { padding: 12px 14px; border-radius: 10px; font-weight: 600; }
+.verdict.ok { background: var(--accent-soft); color: var(--accent); }
+.verdict.stop { background: var(--warn-soft); color: var(--warn); }
+.tip { font: 600 17px/1.45 var(--font-display); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { all: unset; cursor: pointer; font-size: 13px; font-weight: 600; padding: 4px 11px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.found { display: flex; flex-direction: column; gap: 8px; }
+.found .row { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+.toast { position: fixed; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--surface); padding: 8px 16px; border-radius: 99px; font-weight: 600; font-size: 14px; }
+
+@media (max-width: 720px) {
+  .app { grid-template-columns: 1fr; }
+  nav.rail {
+    position: fixed; top: auto; bottom: 0; left: 0; right: 0; height: auto; z-index: 5;
+    flex-direction: row; justify-content: space-around; border-right: 0; border-top: 1px solid var(--line);
+    padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+  }
+  .brand, .rail-foot, nav.rail .badge { display: none; }
+  nav.rail button { font-size: 13px; padding: 8px 10px; }
+  h1 { font-size: 25px; }
+}
+@media (prefers-reduced-motion: no-preference) { .panel { transition: border-color .15s; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="rail" aria-label="Sections">
+    <div class="brand">On<span>Track</span></div>
+    <button data-view="today">Today</button>
+    <button data-view="honesty">Honesty <span class="badge" id="b-streak">0</span></button>
+    <button data-view="events">School events <span class="badge" id="b-events">0</span></button>
+    <button data-view="extras">Extras <span class="badge" id="b-extras">0</span></button>
+    <div class="rail-foot">
+      <button id="exportBtn">Back up my data</button><br>
+      <label><button id="importBtn" type="button">Restore a backup</button></label>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
+  </nav>
+
+  <main>
+    <!-- TODAY -->
+    <section class="wrap" data-section="today">
+      <header>
+        <h1 id="hello">Good day</h1>
+        <p class="sub" id="todayDate"></p>
+      </header>
+      <div class="grid2">
+        <div class="panel">
+          <span class="label">Honesty streak</span>
+          <div class="big"><span id="t-streak">0</span> <small id="t-days">days</small></div>
+          <div class="row" id="t-checkin"></div>
+        </div>
+        <div class="panel">
+          <span class="label">Next school event</span>
+          <div id="t-next"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between"><h2>Extras to do</h2><button class="btn small" data-go="extras">See all</button></div>
+        <ul class="list" id="t-extras"></ul>
+      </div>
+      <div class="panel">
+        <span class="label">Today's reminder</span>
+        <p class="tip" id="t-tip" style="margin:0"></p>
+      </div>
+    </section>
+
+    <!-- HONESTY -->
+    <section class="wrap" data-section="honesty" hidden>
+      <header>
+        <h1>Honesty</h1>
+        <p class="sub">Check in each night, and stop for 5 seconds before you answer when you feel like bending the truth.</p>
+      </header>
+      <div class="panel">
+        <h2>Tonight's check-in</h2>
+        <p class="meta" style="margin:0">Was I honest with everyone today: teachers, family, friends, and myself?</p>
+        <div class="row" id="h-checkin"></div>
+        <div class="week" id="h-week" aria-label="Last 7 days"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Before I say it</h2>
+        <p class="meta" style="margin:0">Tick each one that is true about what you're about to say.</p>
+        <label class="check-q"><input type="checkbox" class="q" id="q1"> It's true. I'm not making anything up.</label>
+        <label class="check-q"><input type="checkbox" class="q" id="q2"> I'm not leaving out the part that matters.</label>
+        <label class="check-q"><input type="checkbox" class="q" id="q3"> I'm not making it sound bigger or smaller than it was.</label>
+        <label class="check-q"><input type="checkbox" class="q" id="q4"> I'd be fine if they found out the whole story later.</label>
+        <div class="verdict stop" id="verdict">Tick all four, then say it.</div>
+        <button class="btn small" id="qReset" style="align-self:flex-start">Clear</button>
+      </div>
+
+      <div class="panel">
+        <h2>Fix a slip</h2>
+        <p class="meta" style="margin:0">Everyone slips. Write it down, then make it right. Saying "actually, that wasn't true" soon is the fastest fix.</p>
+        <form id="slipForm" class="row" style="flex-direction:column;align-items:stretch">
+          <input type="text" id="slipWhat" placeholder="What I said (e.g. told Mr. K my homework was done)" required>
+          <input type="text" id="slipFix" placeholder="How I'll make it right (e.g. tell him tomorrow before class)">
+          <button class="btn primary" style="align-self:flex-start">Add slip</button>
+        </form>
+        <ul class="list" id="slipList"></ul>
+      </div>
+    </section>
+
+    <!-- EVENTS -->
+    <section class="wrap" data-section="events" hidden>
+      <header>
+        <h1>School events</h1>
+        <p class="sub">Tests, deadlines, trips, and forms from your school inbox, in date order.</p>
+      </header>
+
+      <div class="panel">
+        <h2>Check my school inbox</h2>
+        <div class="row">
+          <input type="email" id="schoolEmail" placeholder="Your school email, e.g. noah@school.org">
+          <select id="provider" aria-label="School email type">
+            <option value="google">Google / Gmail</option>
+            <option value="outlook">Outlook / Office 365</option>
+          </select>
+        </div>
+        <div class="row">
+          <a class="btn primary" id="openInbox" href="#" target="_blank" rel="noopener">Open important school emails</a>
+          <span class="meta" id="lastChecked"></span>
+        </div>
+        <p class="meta" style="margin:0">This opens your school inbox already searched for tests, due dates, events, and permission slips. Copy any email that matters and paste it below.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Paste a school email</h2>
+        <textarea id="pasteBox" placeholder="Paste the email here. OnTrack finds the dates and turns them into events."></textarea>
+        <div class="row"><button class="btn primary" id="scanBtn">Find events</button><button class="btn" id="clearPaste">Clear</button></div>
+        <div class="found" id="found"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Add an event</h2>
+        <form id="eventForm" class="row">
+          <input type="text" id="evTitle" placeholder="e.g. Math test, Ch. 4" required>
+          <input type="date" id="evDate" required>
+          <button class="btn primary">Add</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2>Coming up</h2>
+        <ul class="list" id="eventList"></ul>
+      </div>
+    </section>
+
+    <!-- EXTRAS -->
+    <section class="wrap" data-section="extras" hidden>
+      <header>
+        <h1>Extras</h1>
+        <p class="sub">Sports, music, clubs, volunteering, and anything else outside class.</p>
+      </header>
+      <div class="panel">
+        <form id="todoForm" class="row">
+          <input type="text" id="tdText" placeholder="e.g. Bring cleats to practice" required>
+          <select id="tdCat" aria-label="Category">
+            <option>Sports</option><option>Music</option><option>Clubs</option><option>Volunteering</option><option>Other</option>
+          </select>
+          <input type="date" id="tdDue" aria-label="Due date (optional)">
+          <button class="btn primary">Add</button>
+        </form>
+        <div class="chips" id="filters"></div>
+      </div>
+      <div class="panel">
+        <ul class="list" id="todoList"></ul>
+        <button class="btn small" id="clearDone" style="align-self:flex-start">Clear finished</button>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+  const KEY = "ontrack.v1";
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => [...document.querySelectorAll(s)];
+  const uid = () => Math.random().toString(36).slice(2, 10);
+  const pad = (n) => String(n).padStart(2, "0");
+  const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const today = () => ymd(new Date());
+  const parseYmd = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+  const daysUntil = (s) => Math.round((parseYmd(s) - parseYmd(today())) / 86400000);
+  const nice = (s) => parseYmd(s).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+
+  const fresh = () => ({
+    checkins: {}, slips: [], events: [], todos: [],
+    settings: { email: "", provider: "google", lastChecked: "" }, view: "today"
+  });
+  let S;
+  try { S = Object.assign(fresh(), JSON.parse(localStorage.getItem(KEY) || "null") || {}); } catch { S = fresh(); }
+  if (!localStorageOk()) S = fresh();
+  function localStorageOk() { try { localStorage.setItem("__t", "1"); localStorage.removeItem("__t"); return true; } catch { return false; } }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} render(); }
+
+  function toast(msg) {
+    const t = $("#toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), 1800);
+  }
+
+  // ---------- Honesty ----------
+  const TIPS = [
+    "If you have to remember what you said, it probably wasn't the truth.",
+    "\"I don't know\" and \"I forgot\" are honest answers. Use them.",
+    "Small lies make the next one easier. Small truths do too.",
+    "Fixing a lie within a day costs a lot less than getting caught later.",
+    "You can be honest and kind at the same time. Pick your words, not the facts.",
+    "When you feel pressure to lie, slow down. Pressure fades and the truth stays.",
+    "Be honest with yourself first: did you really finish it?"
+  ];
+  function streak() {
+    let n = 0; const d = new Date();
+    if (S.checkins[ymd(d)] !== "honest") d.setDate(d.getDate() - 1); // today not logged yet doesn't break it
+    while (S.checkins[ymd(d)] === "honest") { n++; d.setDate(d.getDate() - 1); }
+    return n;
+  }
+  function checkinButtons(el) {
+    const v = S.checkins[today()];
+    el.innerHTML = "";
+    const mk = (val, txt, cls) => {
+      const b = document.createElement("button");
+      b.className = "btn " + cls; b.textContent = txt; b.setAttribute("aria-pressed", String(v === val));
+      b.onclick = () => { S.checkins[today()] = v === val ? undefined : val; if (!S.checkins[today()]) delete S.checkins[today()]; save(); if (val === "honest" && v !== val) toast("Nice. Streak updated."); if (val === "slip" && v !== val) { setView("honesty"); setTimeout(() => $("#slipWhat").focus(), 50); } };
+      el.appendChild(b);
+    };
+    mk("honest", "I was honest today", "good");
+    mk("slip", "I slipped up", "slip");
+  }
+  function renderWeek() {
+    const w = $("#h-week"); w.innerHTML = "";
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const v = S.checkins[ymd(d)];
+      const c = document.createElement("div"); c.className = "day";
+      c.innerHTML = `<div class="dot ${v || ""}" title="${v === "honest" ? "Honest" : v === "slip" ? "Slipped" : "No check-in"}"></div>${d.toLocaleDateString(undefined, { weekday: "narrow" })}`;
+      w.appendChild(c);
+    }
+  }
+  function renderVerdict() {
+    const all = $$(".q").every((q) => q.checked);
+    const v = $("#verdict");
+    v.className = "verdict " + (all ? "ok" : "stop");
+    v.textContent = all ? "Good to go. Say it." : "Not all four yet. Change what you're about to say until they're all true.";
+  }
+  $$(".q").forEach((q) => (q.onchange = renderVerdict));
+  $("#qReset").onclick = () => { $$(".q").forEach((q) => (q.checked = false)); renderVerdict(); };
+  $("#slipForm").onsubmit = (e) => {
+    e.preventDefault();
+    S.slips.unshift({ id: uid(), what: $("#slipWhat").value.trim(), fix: $("#slipFix").value.trim(), date: today(), fixed: false });
+    $("#slipWhat").value = ""; $("#slipFix").value = ""; save();
+  };
+  function renderSlips() {
+    const ul = $("#slipList"); ul.innerHTML = "";
+    if (!S.slips.length) { ul.innerHTML = `<li class="empty" style="display:block">No slips logged. When one happens, write it here and plan the fix.</li>`; return; }
+    S.slips.forEach((s) => {
+      const li = document.createElement("li"); if (s.fixed) li.className = "done";
+      li.innerHTML = `<input type="checkbox" ${s.fixed ? "checked" : ""} aria-label="Made it right">
+        <div class="t"><div class="main"></div><div class="meta"></div></div><button class="x" aria-label="Delete">×</button>`;
+      li.querySelector(".main").textContent = s.what;
+      li.querySelector(".meta").textContent = (s.fix ? "Fix: " + s.fix + " · " : "") + nice(s.date) + (s.fixed ? " · made it right" : "");
+      li.querySelector("input").onchange = (e) => { s.fixed = e.target.checked; save(); if (s.fixed) toast("Made it right. That takes guts."); };
+      li.querySelector(".x").onclick = () => { S.slips = S.slips.filter((x) => x !== s); save(); };
+      ul.appendChild(li);
+    });
+  }
+
+  // ---------- Events ----------
+  const SEARCH_TERMS = ["test", "quiz", "exam", "due", "deadline", "assignment", "project", "permission", "field trip", "event", "meeting", "conference", "reminder"];
+  function inboxUrl() {
+    const email = S.settings.email.trim();
+    if (S.settings.provider === "outlook") {
+      return "https://outlook.office.com/mail/inbox";
+    }
+    const q = "newer_than:21d (" + SEARCH_TERMS.map((t) => t.includes(" ") ? `"${t}"` : t).join(" OR ") + ")";
+    const user = email ? encodeURIComponent(email) : "0";
+    return `https://mail.google.com/mail/u/${user}/#search/${encodeURIComponent(q)}`;
+  }
+  $("#schoolEmail").oninput = (e) => { S.settings.email = e.target.value; save(); };
+  $("#provider").onchange = (e) => { S.settings.provider = e.target.value; save(); };
+  $("#openInbox").onclick = () => { S.settings.lastChecked = new Date().toISOString(); setTimeout(save, 0); };
+
+  const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+  const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  function futureDate(m, d, y) {
+    const now = parseYmd(today());
+    let dt = new Date(y ?? now.getFullYear(), m, d);
+    if (y == null && dt < now && (now - dt) > 60 * 86400000) dt = new Date(now.getFullYear() + 1, m, d);
+    return dt;
+  }
+  // Pull dates out of pasted email text. Returns [{date, title}] sorted by date.
+  function findEvents(text) {
+    const out = new Map();
+    const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    const subj = (lines.find((l) => /^subject:/i.test(l)) || "").replace(/^subject:\s*/i, "");
+    const add = (dt, line) => {
+      if (isNaN(dt)) return;
+      const key = ymd(dt);
+      if (out.has(key)) return;
+      let title = line.replace(/\s+/g, " ").trim();
+      if (title.length > 90) title = title.slice(0, 87) + "…";
+      out.set(key, { date: key, title: title || subj || "School event" });
+    };
+    for (const line of lines) {
+      if (/^(from|to|sent|date|cc):/i.test(line)) continue;
+      let m;
+      const reMonth = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?/gi;
+      while ((m = reMonth.exec(line))) add(futureDate(MONTHS.indexOf(m[1].slice(0, 3).toLowerCase()), +m[2], m[3] ? +m[3] : null), line);
+      const reDayMonth = /\b(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b(?:\s+(\d{4}))?/gi;
+      while ((m = reDayMonth.exec(line))) add(futureDate(MONTHS.indexOf(m[2].slice(0, 3).toLowerCase()), +m[1], m[3] ? +m[3] : null), line);
+      const reNum = /\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/g;
+      while ((m = reNum.exec(line))) {
+        let y = m[3] ? +m[3] : null; if (y && y < 100) y += 2000;
+        if (+m[1] <= 12 && +m[2] <= 31) add(futureDate(+m[1] - 1, +m[2], y), line);
+      }
+      if (/\btomorrow\b/i.test(line)) { const d = parseYmd(today()); d.setDate(d.getDate() + 1); add(d, line); }
+      const reWd = /\b(?:this\s+|next\s+|on\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/gi;
+      while ((m = reWd.exec(line))) {
+        const d = parseYmd(today()); const target = WEEKDAYS.indexOf(m[1].toLowerCase());
+        let diff = (target - d.getDay() + 7) % 7 || 7;
+        if (/next\s/i.test(m[0])) diff += diff < 7 ? 7 : 0;
+        d.setDate(d.getDate() + diff); add(d, line);
+      }
+    }
+    return [...out.values()].sort((a, b) => a.date.localeCompare(b.date));
+  }
+  $("#scanBtn").onclick = () => {
+    const found = findEvents($("#pasteBox").value);
+    const box = $("#found"); box.innerHTML = "";
+    if (!found.length) { box.innerHTML = `<p class="empty">No dates found. Add the event by hand below.</p>`; return; }
+    found.forEach((f) => {
+      const r = document.createElement("div"); r.className = "row";
+      r.innerHTML = `<input type="text" aria-label="Event name"><input type="date" aria-label="Event date"><button class="btn small primary">Add</button>`;
+      const [t, d] = r.querySelectorAll("input"); t.value = f.title; d.value = f.date;
+      r.querySelector("button").onclick = () => { addEvent(t.value, d.value, "email"); r.remove(); };
+      box.appendChild(r);
+    });
+  };
+  $("#clearPaste").onclick = () => { $("#pasteBox").value = ""; $("#found").innerHTML = ""; };
+  function addEvent(title, date, source) {
+    if (!title.trim() || !date) return;
+    S.events.push({ id: uid(), title: title.trim(), date, source, ready: false }); save(); toast("Event added");
+  }
+  $("#eventForm").onsubmit = (e) => { e.preventDefault(); addEvent($("#evTitle").value, $("#evDate").value, "manual"); $("#evTitle").value = ""; $("#evDate").value = ""; };
+  function duePill(date, done) {
+    const n = daysUntil(date);
+    if (done) return `<span class="pill ok">Ready</span>`;
+    if (n < 0) return `<span class="pill late">${-n}d ago</span>`;
+    if (n === 0) return `<span class="pill late">Today</span>`;
+    if (n === 1) return `<span class="pill soon">Tomorrow</span>`;
+    if (n <= 3) return `<span class="pill soon">In ${n} days</span>`;
+    return `<span class="pill ok">In ${n} days</span>`;
+  }
+  const upcoming = () => S.events.filter((e) => daysUntil(e.date) >= -1).sort((a, b) => a.date.localeCompare(b.date));
+  function renderEvents() {
+    const ul = $("#eventList"); ul.innerHTML = "";
+    const list = [...S.events].sort((a, b) => a.date.localeCompare(b.date));
+    if (!list.length) { ul.innerHTML = `<li class="empty" style="display:block">No events yet. Open your school inbox above, then paste an email or add one by hand.</li>`; return; }
+    list.forEach((ev) => {
+      const li = document.createElement("li"); if (ev.ready) li.className = "done";
+      li.innerHTML = `<input type="checkbox" ${ev.ready ? "checked" : ""} aria-label="I'm ready for this">
+        <div class="t"><div class="main"></div><div class="meta"></div></div>
+        <div class="row" style="gap:6px;flex-wrap:nowrap">${duePill(ev.date, ev.ready)}<button class="x" aria-label="Delete">×</button></div>`;
+      li.querySelector(".main").textContent = ev.title;
+      li.querySelector(".meta").textContent = nice(ev.date) + (ev.source === "email" ? " · from email" : "");
+      li.querySelector("input").onchange = (e) => { ev.ready = e.target.checked; save(); };
+      li.querySelector(".x").onclick = () => { S.events = S.events.filter((x) => x !== ev); save(); };
+      ul.appendChild(li);
+    });
+  }
+
+  // ---------- Extras ----------
+  let filter = "All";
+  const CATS = ["All", "Sports", "Music", "Clubs", "Volunteering", "Other"];
+  $("#todoForm").onsubmit = (e) => {
+    e.preventDefault();
+    S.todos.push({ id: uid(), text: $("#tdText").value.trim(), cat: $("#tdCat").value, due: $("#tdDue").value || "", done: false });
+    $("#tdText").value = ""; $("#tdDue").value = ""; save();
+  };
+  $("#clearDone").onclick = () => { S.todos = S.todos.filter((t) => !t.done); save(); };
+  function sortTodos(list) {
+    return [...list].sort((a, b) => (a.done - b.done) || ((a.due || "9999") .localeCompare(b.due || "9999")));
+  }
+  function todoItem(t) {
+    const li = document.createElement("li"); if (t.done) li.className = "done";
+    li.innerHTML = `<input type="checkbox" ${t.done ? "checked" : ""} aria-label="Done">
+      <div class="t"><div class="main"></div><div class="meta"></div></div>
+      <div class="row" style="gap:6px;flex-wrap:nowrap">${t.due ? duePill(t.due, t.done) : ""}<span class="pill cat">${t.cat}</span><button class="x" aria-label="Delete">×</button></div>`;
+    li.querySelector(".main").textContent = t.text;
+    li.querySelector(".meta").textContent = t.due ? "Due " + nice(t.due) : "No due date";
+    li.querySelector("input").onchange = (e) => { t.done = e.target.checked; save(); };
+    li.querySelector(".x").onclick = () => { S.todos = S.todos.filter((x) => x !== t); save(); };
+    return li;
+  }
+  function renderTodos() {
+    const f = $("#filters"); f.innerHTML = "";
+    CATS.forEach((c) => {
+      const b = document.createElement("button"); b.className = "chip"; b.textContent = c;
+      b.setAttribute("aria-pressed", String(filter === c)); b.onclick = () => { filter = c; renderTodos(); };
+      f.appendChild(b);
+    });
+    const ul = $("#todoList"); ul.innerHTML = "";
+    const list = sortTodos(S.todos.filter((t) => filter === "All" || t.cat === filter));
+    if (!list.length) ul.innerHTML = `<li class="empty" style="display:block">Nothing here yet. Add your first extra above.</li>`;
+    list.forEach((t) => ul.appendChild(todoItem(t)));
+  }
+
+  // ---------- Today ----------
+  function renderToday() {
+    const h = new Date().getHours();
+    $("#hello").textContent = h < 12 ? "Good morning, Noah" : h < 18 ? "Good afternoon, Noah" : "Good evening, Noah";
+    $("#todayDate").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+    $("#t-streak").textContent = streak(); $("#t-days").textContent = streak() === 1 ? "day" : "days";
+    checkinButtons($("#t-checkin"));
+    const next = upcoming().find((e) => !e.ready) || upcoming()[0];
+    $("#t-next").innerHTML = next
+      ? `<div class="row" style="justify-content:space-between"><strong class="nx"></strong>${duePill(next.date, next.ready)}</div><div class="meta">${nice(next.date)}</div>`
+      : `<p class="empty" style="margin:0">Nothing coming up. <button class="btn small" data-go="events">Check school inbox</button></p>`;
+    if (next) $("#t-next .nx").textContent = next.title;
+    const ul = $("#t-extras"); ul.innerHTML = "";
+    const open = sortTodos(S.todos.filter((t) => !t.done)).slice(0, 4);
+    if (!open.length) ul.innerHTML = `<li class="empty" style="display:block">All caught up.</li>`;
+    open.forEach((t) => ul.appendChild(todoItem(t)));
+    const start = new Date(new Date().getFullYear(), 0, 0);
+    $("#t-tip").textContent = TIPS[Math.floor((new Date() - start) / 86400000) % TIPS.length];
+  }
+
+  // ---------- Shell ----------
+  function setView(v) { S.view = v; save(); }
+  $$("nav.rail button[data-view]").forEach((b) => (b.onclick = () => setView(b.dataset.view)));
+  document.addEventListener("click", (e) => { const g = e.target.closest("[data-go]"); if (g) setView(g.dataset.go); });
+
+  $("#exportBtn").onclick = () => {
+    const blob = new Blob([JSON.stringify(S, null, 2)], { type: "application/json" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `ontrack-backup-${today()}.json`; a.click();
+    toast("Backup saved to Downloads");
+  };
+  $("#importBtn").onclick = () => $("#importFile").click();
+  $("#importFile").onchange = async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    try { S = Object.assign(fresh(), JSON.parse(await f.text())); save(); toast("Backup restored"); }
+    catch { toast("That file isn't an OnTrack backup"); }
+  };
+
+  function render() {
+    $$("section[data-section]").forEach((s) => (s.hidden = s.dataset.section !== S.view));
+    $$("nav.rail button[data-view]").forEach((b) => b.setAttribute("aria-current", String(b.dataset.view === S.view)));
+    $("#b-streak").textContent = streak();
+    $("#b-events").textContent = upcoming().filter((e) => !e.ready).length;
+    $("#b-extras").textContent = S.todos.filter((t) => !t.done).length;
+    checkinButtons($("#h-checkin")); renderWeek(); renderSlips(); renderEvents(); renderTodos(); renderToday();
+    if (document.activeElement !== $("#schoolEmail")) $("#schoolEmail").value = S.settings.email;
+    $("#provider").value = S.settings.provider;
+    $("#openInbox").href = inboxUrl();
+    $("#lastChecked").textContent = S.settings.lastChecked ? "Last checked " + new Date(S.settings.lastChecked).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" }) : "Not checked yet";
+  }
+  window.__ontrack = { findEvents };
+  renderVerdict(); render();
+})();
+</script>
+</body>
+</html>

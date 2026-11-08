@@ -29,3 +29,7 @@ Open http://localhost:3000.
 2. **Accounts**: add login (for example Clerk or Supabase Auth) so limits follow the user, not their IP address.
 3. **Hosting**: deploy to Render, Railway or Fly.io and set `ANTHROPIC_API_KEY` as a secret there.
 4. **Costs**: every listing is a paid API call. Set a spend limit in the Anthropic Console.
+
+## Also in this repo
+
+- [`ontrack/`](ontrack/README.md): OnTrack, a Mac app for honesty check-ins, school events, and an extras to-do list.
